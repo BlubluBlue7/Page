@@ -1,36 +1,19 @@
+import GTSimpleSpriteAssembler2D from "./GTSimpleSpriteAssembler2D";
+
 const gfx = cc.gfx
 
-interface BookVertex {
-    x:number,
-    y:number,
-    u:number,
-    v:number
-}
+let vfmtPosUvColorFront = new gfx.VertexFormat([
+    { name: gfx.ATTR_POSITION, type: gfx.ATTR_TYPE_FLOAT32, num: 2 },
+    { name: gfx.ATTR_UV0, type: gfx.ATTR_TYPE_FLOAT32, num: 2 },
+    { name: gfx.ATTR_COLOR, type: gfx.ATTR_TYPE_UINT8, num: 4, normalize: true },
+    { name: "a_isFront", type: gfx.ATTR_TYPE_FLOAT32, num: 1},
+]);
 
-interface BookQuad {
-    lt:number,
-    lb:number,
-    rb:number,
-    rt:number
-}
-
-export default class BezierAssembler extends cc.Assembler {
-    protected  vfmtPosUvColor = new gfx.VertexFormat([
-        { name: gfx.ATTR_POSITION, type: gfx.ATTR_TYPE_FLOAT32, num: 2 },
-        { name: gfx.ATTR_UV0, type: gfx.ATTR_TYPE_FLOAT32, num: 2 },
-        { name: gfx.ATTR_COLOR, type: gfx.ATTR_TYPE_UINT8, num: 4, normalize: true },
-        { name: "a_isFront", type: gfx.ATTR_TYPE_FLOAT32, num: 1},
-    ]);
-
-    protected verts:BookVertex[] = []
-    protected quads:BookQuad[] = []
-
+export default class BezierAssembler extends GTSimpleSpriteAssembler2D {
     protected angle:number = 0
     public updateRenderData (comp: any) {
         if (comp) {
             let pointNum: number = comp.getPointCount()
-            this.verts.length = 0
-            this.quads.length = 0
             if (pointNum < 2) {
                 return
             }
@@ -56,6 +39,11 @@ export default class BezierAssembler extends cc.Assembler {
             let lastU = 0
             // 下一个点的纹理坐标
             let nextU = 0
+
+            // let uvOffset = this.uvOffset;
+            let floatsPerVert = this.floatsPerVert;
+            let verts = this._renderData.vDatas[0];
+            let dstOffset;          // index of verts[]
             for (let i = 1; i < pointNum; i++) {
                 let isTail = i === pointNum - 1
                 let lastBezierPos = bezierPosList[i - 1]
@@ -72,20 +60,79 @@ export default class BezierAssembler extends cc.Assembler {
                     分别计算小矩形四个顶点的坐标和纹理坐标
                     各顶点的坐标计算方法为在左下角坐标的基础上加上顶点在贝塞尔曲线上的坐标，如果是书页顶部的顶点则还要加上书页的高度
                 */
-                let lb = this.verts.push({x: posX + lastBezierPos.x, y: posY + lastBezierPos.y, u: lastU, v: 1 })
-                let rb = this.verts.push({x: posX + nextBezierPos.x, y: posY + nextBezierPos.y, u: nextU, v: 1 })
-                let lt = this.verts.push({x: posX + lastBezierPos.x, y: posY + height + lastBezierPos.y, u: lastU, v: 0 })
-                let rt = this.verts.push({x: posX + nextBezierPos.x, y: posY + height + nextBezierPos.y, u: nextU, v: 0 })
-                // 填入各顶点对应的索引值
-                this.quads.push({
-                    lb: lb - 1,
-                    rb: rb - 1,
-                    lt: lt - 1,
-                    rt : rt - 1,
-                })
+
+                // same as updateVerts()
+                dstOffset = floatsPerVert * (i-1) * 4;// + uvOffset;
+                verts[dstOffset]     = posX + lastBezierPos.x;
+                verts[dstOffset + 1] = posY + lastBezierPos.y;
+                verts[dstOffset + 2] = lastU;
+                verts[dstOffset + 3] = 1;
+                dstOffset += floatsPerVert;
+
+                verts[dstOffset]     = posX + nextBezierPos.x;
+                verts[dstOffset + 1] = posY + nextBezierPos.y;
+                verts[dstOffset + 2] = nextU;
+                verts[dstOffset + 3] = 1;
+                dstOffset += floatsPerVert;
+
+                verts[dstOffset]     = posX + lastBezierPos.x;
+                verts[dstOffset + 1] = posY + height + lastBezierPos.y;
+                verts[dstOffset + 2] = lastU;
+                verts[dstOffset + 3] = 0;
+                dstOffset += floatsPerVert;
+
+                verts[dstOffset]     = posX + nextBezierPos.x;
+                verts[dstOffset + 1] = posY + height + nextBezierPos.y;
+                verts[dstOffset + 2] = nextU;
+                verts[dstOffset + 3] = 0;
+                dstOffset += floatsPerVert;
+
                 lastU = nextU
             }
         }
+    }
+
+    init(comp: cc.RenderComponent) {
+        super.init(comp);
+
+        //@ts-ignore
+        let segmentCount = comp.getPointCount() - 1;
+        this.verticesCount = 4 * segmentCount;
+        this.indicesCount = 6 * segmentCount;
+        this.floatsPerVert = 6;
+        
+        //@ts-ignore
+        this._renderData = new cc.RenderData();
+        this._renderData.init(this);
+
+        // this.initLocal();
+        // this.initData();
+
+        let data = this._renderData;
+        // createFlexData支持创建指定格式的renderData
+        data.createFlexData(0, this.verticesCount, this.indicesCount, this.getVfmt());
+
+        // 顶点数固定的情况下索引不变化
+        let indices = data.iDatas[0];
+        let count = indices.length / 6;
+        for (let i = 0, idx = 0; i < count; i++) {
+            let vertextID = i * 4;
+            indices[idx++] = vertextID;
+            indices[idx++] = vertextID+1;
+            indices[idx++] = vertextID+2;
+            indices[idx++] = vertextID+1;
+            indices[idx++] = vertextID+3;
+            indices[idx++] = vertextID+2;
+        }
+    }
+
+    getVfmt() {
+        return vfmtPosUvColorFront;
+    }
+
+    getBuffer() {
+        //@ts-ignore
+        return cc.renderer._handle.getBuffer("mesh", this.getVfmt());
     }
 
     private _getCtrlPosByAngle(width: number): {startPos: cc.Vec2, endPos: cc.Vec2, ctrlPos1: cc.Vec2, ctrlPos2: cc.Vec2} {
@@ -174,54 +221,5 @@ export default class BezierAssembler extends cc.Assembler {
         ctrlPos2 = ctrlPos2.mul(3 * (1 - t) * Math.pow(t, 2))
         endPos = endPos.mul(Math.pow(t, 3))
         return startPos.add(ctrlPos1.add(ctrlPos2.add(endPos)))
-    }
-
-    public fillBuffers (comp:cc.RenderComponent, renderer:cc.renderer) {
-        if (this.verts.length == 0) {
-            return
-        }
-        let buffer = renderer.getBuffer('mesh', this.vfmtPosUvColor)
-
-        let vertexOffset = buffer.byteOffset >> 2
-        let indiceOffset = buffer.indiceOffset
-        let vertexId = buffer.vertexOffset
-
-        let verts = this.verts
-        let vertexCount = verts.length
-        let indiceCount = this.quads.length * 6
-        // 通过设定的顶点数量及顶点索引数量获取 buffer 的数据空间
-        buffer.request(vertexCount, indiceCount)
-
-        let vbuf = buffer._vData //positon/uv
-        let ibuf = buffer._iData //index 
-        let uintbuf = buffer._uintVData // colors
-
-        let white = cc.Color.WHITE._val
-        // 填充顶点缓冲
-        for (let i = 0, len = verts.length; i < len; i++) {
-            let vert = verts[i]
-            let isFirstVert = i % 2 === 0
-            let firstVert = isFirstVert ? vert : verts[i - 1]
-            let secondVert = isFirstVert ? verts[i + 1] : vert
-            // 计算当前小矩形是正面还是背面
-            let isFront = firstVert.x < secondVert.x ? 1.0 : 0.0
-            vbuf[vertexOffset++] = vert.x;
-            vbuf[vertexOffset++] = vert.y;
-            vbuf[vertexOffset++] = vert.u;
-            vbuf[vertexOffset++] = vert.v;
-            uintbuf[vertexOffset++] = white;
-            vbuf[vertexOffset++] = isFront;
-        }
-        // 填充索引缓冲
-        for (let i = 0, len = this.quads.length; i < len; i++) {
-            let quad = this.quads[i]
-            ibuf[indiceOffset++] = vertexId + quad.lb
-            ibuf[indiceOffset++] = vertexId + quad.rb
-            ibuf[indiceOffset++] = vertexId + quad.lt
-
-            ibuf[indiceOffset++] = vertexId + quad.rb
-            ibuf[indiceOffset++] = vertexId + quad.rt
-            ibuf[indiceOffset++] = vertexId + quad.lt
-        }
     }
 }
