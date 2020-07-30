@@ -62,7 +62,7 @@ export default class BezierAssembler extends GTSimpleSpriteAssembler2D {
                 */
 
                 // same as updateVerts()
-                dstOffset = floatsPerVert * (i-1) * 4;// + uvOffset;
+                dstOffset = floatsPerVert * (i-1) * 4;
                 verts[dstOffset]     = posX + lastBezierPos.x;
                 verts[dstOffset + 1] = posY + lastBezierPos.y;
                 verts[dstOffset + 2] = lastU;
@@ -85,7 +85,7 @@ export default class BezierAssembler extends GTSimpleSpriteAssembler2D {
                 verts[dstOffset + 1] = posY + height + nextBezierPos.y;
                 verts[dstOffset + 2] = nextU;
                 verts[dstOffset + 3] = 0;
-                dstOffset += floatsPerVert;
+                // dstOffset += floatsPerVert;
 
                 lastU = nextU
             }
