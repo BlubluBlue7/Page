@@ -90,6 +90,7 @@ export default class BezierAssembler extends PageEffectAssemblerBase {
             }
 
             this.updateColor(comp, null);
+            this.updateIsFront(comp, 5);
         }
     }
 
