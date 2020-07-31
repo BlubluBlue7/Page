@@ -42,7 +42,7 @@ export default class BezierAssembler extends GTSimpleSpriteAssembler2D {
 
             // let uvOffset = this.uvOffset;
             let floatsPerVert = this.floatsPerVert;
-            let verts = this._renderData.vDatas[0];
+            let verts = this.renderData.vDatas[0];
             let dstOffset;          // index of verts[]
             for (let i = 1; i < pointNum; i++) {
                 let isTail = i === pointNum - 1
@@ -61,7 +61,6 @@ export default class BezierAssembler extends GTSimpleSpriteAssembler2D {
                     各顶点的坐标计算方法为在左下角坐标的基础上加上顶点在贝塞尔曲线上的坐标，如果是书页顶部的顶点则还要加上书页的高度
                 */
 
-                // same as updateVerts()
                 dstOffset = floatsPerVert * (i-1) * 4;
                 verts[dstOffset]     = posX + lastBezierPos.x;
                 verts[dstOffset + 1] = posY + lastBezierPos.y;
@@ -85,10 +84,11 @@ export default class BezierAssembler extends GTSimpleSpriteAssembler2D {
                 verts[dstOffset + 1] = posY + height + nextBezierPos.y;
                 verts[dstOffset + 2] = nextU;
                 verts[dstOffset + 3] = 0;
-                // dstOffset += floatsPerVert;
 
                 lastU = nextU
             }
+
+            this.updateColor(comp, null);
         }
     }
 
@@ -101,38 +101,11 @@ export default class BezierAssembler extends GTSimpleSpriteAssembler2D {
         this.indicesCount = 6 * segmentCount;
         this.floatsPerVert = 6;
         
-        //@ts-ignore
-        this._renderData = new cc.RenderData();
-        this._renderData.init(this);
-
-        // this.initLocal();
-        // this.initData();
-
-        let data = this._renderData;
-        // createFlexData支持创建指定格式的renderData
-        data.createFlexData(0, this.verticesCount, this.indicesCount, this.getVfmt());
-
-        // 顶点数固定的情况下索引不变化
-        let indices = data.iDatas[0];
-        let count = indices.length / 6;
-        for (let i = 0, idx = 0; i < count; i++) {
-            let vertextID = i * 4;
-            indices[idx++] = vertextID;
-            indices[idx++] = vertextID+1;
-            indices[idx++] = vertextID+2;
-            indices[idx++] = vertextID+1;
-            indices[idx++] = vertextID+3;
-            indices[idx++] = vertextID+2;
-        }
+        this.initData();
     }
 
     getVfmt() {
         return vfmtPosUvColorFront;
-    }
-
-    getBuffer() {
-        //@ts-ignore
-        return cc.renderer._handle.getBuffer("mesh", this.getVfmt());
     }
 
     private _getCtrlPosByAngle(width: number): {startPos: cc.Vec2, endPos: cc.Vec2, ctrlPos1: cc.Vec2, ctrlPos2: cc.Vec2} {

@@ -1,68 +1,84 @@
-// Copyright 2020 Cao Gaoting<caogtaa@gmail.com>
-// https://caogtaa.github.io
-// This file is licensed under the MIT License.
-// License text available at https://opensource.org/licenses/MIT
 
-/*
- * Date: 2020-07-21 16:23:10
- * LastEditors: GT<caogtaa@gmail.com>
- * LastEditTime: 2020-07-22 14:04:52
-*/ 
+export default class GTSimpleSpriteAssembler2D extends cc.Assembler {
+    protected verticesCount = 4;
+    protected indicesCount = 6;
+    protected floatsPerVert = 5;
 
-import GTAssembler2D from "./GTAssembler2D";
+    protected uvOffset = 2;
+    protected colorOffset = 4;
+    
+    protected renderData: cc.RenderData = null;
 
-export default class GTSimpleSpriteAssembler2D extends GTAssembler2D {
-    // 这部分使用SimpleSpriteAssembler的内容
-    updateRenderData(sprite: cc.Sprite) {
-        this.packToDynamicAtlas(sprite, sprite._spriteFrame);
-        super.updateRenderData(sprite);
+    get verticesFloats() {
+        return this.verticesCount * this.floatsPerVert;
     }
 
-    updateUVs(sprite) {
-        let uv = sprite._spriteFrame.uv;
-        let uvOffset = this.uvOffset;
+    getBuffer() {
+        //@ts-ignore
+        return cc.renderer._handle.getBuffer("mesh", this.getVfmt());
+    }
+
+    getVfmt() {
+        // to be overwrite
+        return null;
+    }
+
+    updateColor(comp, color) {
+        let uintVerts = this.renderData.uintVDatas[0];
+        if (!uintVerts) return;
+        color = color != null ? color : comp.node.color._val;
         let floatsPerVert = this.floatsPerVert;
-        let verts = this._renderData.vDatas[0];
-        for (let i = 0; i < 4; i++) {
-            let srcOffset = i * 2;
-            let dstOffset = floatsPerVert * i + uvOffset;
-            verts[dstOffset] = uv[srcOffset];
-            verts[dstOffset + 1] = uv[srcOffset + 1];
+        let colorOffset = this.colorOffset;
+        for (let i = colorOffset, l = uintVerts.length; i < l; i += floatsPerVert) {
+            uintVerts[i] = color;
+        }
+    }
+    
+    initData() {
+        //@ts-ignore
+        this.renderData = new cc.RenderData();
+        this.renderData.init(this);
+
+        let data = this.renderData;
+        // createFlexData支持创建指定格式的renderData
+        data.createFlexData(0, this.verticesCount, this.indicesCount, this.getVfmt());
+
+        // 顶点数固定的情况下索引不变化
+        let indices = data.iDatas[0];
+        let count = indices.length / 6;
+        for (let i = 0, idx = 0; i < count; i++) {
+            let vertextID = i * 4;
+            indices[idx++] = vertextID;
+            indices[idx++] = vertextID+1;
+            indices[idx++] = vertextID+2;
+            indices[idx++] = vertextID+1;
+            indices[idx++] = vertextID+3;
+            indices[idx++] = vertextID+2;
         }
     }
 
-    updateVerts(sprite) {
-        let node = sprite.node,
-            cw = node.width, ch = node.height,
-            appx = node.anchorX * cw, appy = node.anchorY * ch,
-            l, b, r, t;
-        if (sprite.trim) {
-            l = -appx;
-            b = -appy;
-            r = cw - appx;
-            t = ch - appy;
-        }
-        else {
-            let frame = sprite.spriteFrame,
-                ow = frame._originalSize.width, oh = frame._originalSize.height,
-                rw = frame._rect.width, rh = frame._rect.height,
-                offset = frame._offset,
-                scaleX = cw / ow, scaleY = ch / oh;
-            let trimLeft = offset.x + (ow - rw) / 2;
-            let trimRight = offset.x - (ow - rw) / 2;
-            let trimBottom = offset.y + (oh - rh) / 2;
-            let trimTop = offset.y - (oh - rh) / 2;
-            l = trimLeft * scaleX - appx;
-            b = trimBottom * scaleY - appy;
-            r = cw + trimRight * scaleX - appx;
-            t = ch + trimTop * scaleY - appy;
+    fillBuffers(comp, renderer) {
+        let renderData = this.renderData;
+        let vData = renderData.vDatas[0];
+        let iData = renderData.iDatas[0];
+
+        let buffer = this.getBuffer();
+        let offsetInfo = buffer.request(this.verticesCount, this.indicesCount);
+
+        let vertexOffset = offsetInfo.byteOffset >> 2,
+            vbuf = buffer._vData;
+
+        if (vData.length + vertexOffset > vbuf.length) {
+            vbuf.set(vData.subarray(0, vbuf.length - vertexOffset), vertexOffset);
+        } else {
+            vbuf.set(vData, vertexOffset);
         }
 
-        let local = this._local;
-        local[0] = l;
-        local[1] = b;
-        local[2] = r;
-        local[3] = t;
-        this.updateWorldVerts(sprite);
+        let ibuf = buffer._iData,
+            indiceOffset = offsetInfo.indiceOffset,
+            vertexId = offsetInfo.vertexOffset;
+        for (let i = 0, l = iData.length; i < l; i++) {
+            ibuf[indiceOffset++] = vertexId + iData[i];
+        }
     }
 }
