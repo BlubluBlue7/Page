@@ -84,6 +84,7 @@ export default class VerletAssembler extends PageEffectAssemblerBase {
             }
 
             this.updateColor(comp, null);
+            this.updateIsFront(comp, 5);
         }
     }
 }

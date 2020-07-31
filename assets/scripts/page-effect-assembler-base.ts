@@ -32,6 +32,20 @@ export default class PageEffectAssemblerBase extends cc.Assembler {
             uintVerts[i] = color;
         }
     }
+
+    updateIsFront(comp, dataOffset) {
+        let verts = this.renderData.vDatas[0];
+        let index = 0;
+        let floatsPerVert = this.floatsPerVert;
+        for (let i = 0, n = this.verticesCount; i < n; ++i) {
+            index = i * floatsPerVert;
+            let isFirstVert = i % 2 === 0;
+            let firstVertX = isFirstVert ? verts[index] : verts[index - floatsPerVert];
+            let secondVertX = isFirstVert ? verts[index + floatsPerVert] : verts[index];
+            let isFront = firstVertX < secondVertX ? 1.0 : 0.0;
+            verts[index + dataOffset] = isFront;
+        }
+    }
     
     initData() {
         //@ts-ignore
