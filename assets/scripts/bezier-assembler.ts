@@ -1,4 +1,4 @@
-import GTSimpleSpriteAssembler2D from "./GTSimpleSpriteAssembler2D";
+import PageEffectAssemblerBase from "./page-effect-assembler-base";
 
 const gfx = cc.gfx
 
@@ -9,7 +9,7 @@ let vfmtPosUvColorFront = new gfx.VertexFormat([
     { name: "a_isFront", type: gfx.ATTR_TYPE_FLOAT32, num: 1},
 ]);
 
-export default class BezierAssembler extends GTSimpleSpriteAssembler2D {
+export default class BezierAssembler extends PageEffectAssemblerBase {
     protected angle:number = 0
     public updateRenderData (comp: any) {
         if (comp) {
@@ -40,10 +40,10 @@ export default class BezierAssembler extends GTSimpleSpriteAssembler2D {
             // 下一个点的纹理坐标
             let nextU = 0
 
-            // let uvOffset = this.uvOffset;
             let floatsPerVert = this.floatsPerVert;
             let verts = this.renderData.vDatas[0];
-            let dstOffset;          // index of verts[]
+            // 写verts时的下标
+            let dstOffset = 0;
             for (let i = 1; i < pointNum; i++) {
                 let isTail = i === pointNum - 1
                 let lastBezierPos = bezierPosList[i - 1]
@@ -61,6 +61,7 @@ export default class BezierAssembler extends GTSimpleSpriteAssembler2D {
                     各顶点的坐标计算方法为在左下角坐标的基础上加上顶点在贝塞尔曲线上的坐标，如果是书页顶部的顶点则还要加上书页的高度
                 */
 
+                // 将4个顶点数据写入verts
                 dstOffset = floatsPerVert * (i-1) * 4;
                 verts[dstOffset]     = posX + lastBezierPos.x;
                 verts[dstOffset + 1] = posY + lastBezierPos.y;

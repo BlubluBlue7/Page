@@ -1,12 +1,11 @@
 
-export default class GTSimpleSpriteAssembler2D extends cc.Assembler {
+export default class PageEffectAssemblerBase extends cc.Assembler {
+    // 普通四边形的属性，根据实际的顶点格式、数量调整
     protected verticesCount = 4;
     protected indicesCount = 6;
     protected floatsPerVert = 5;
 
-    protected uvOffset = 2;
-    protected colorOffset = 4;
-    
+    protected colorOffset = 4;    
     protected renderData: cc.RenderData = null;
 
     get verticesFloats() {

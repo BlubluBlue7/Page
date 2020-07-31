@@ -1,4 +1,4 @@
-import GTSimpleSpriteAssembler2D from "./GTSimpleSpriteAssembler2D";
+import PageEffectAssemblerBase from "./page-effect-assembler-base";
 
 const gfx = cc.gfx
 
@@ -9,7 +9,7 @@ let vfmtPosUvColorFront = new gfx.VertexFormat([
     { name: "a_isFront", type: gfx.ATTR_TYPE_FLOAT32, num: 1},
 ]);
 
-export default class VerletAssembler extends GTSimpleSpriteAssembler2D {
+export default class VerletAssembler extends PageEffectAssemblerBase {
 
     init(comp: cc.RenderComponent) {
         super.init(comp);
@@ -47,13 +47,15 @@ export default class VerletAssembler extends GTSimpleSpriteAssembler2D {
 
             let floatsPerVert = this.floatsPerVert;
             let verts = this.renderData.vDatas[0];
-            let dstOffset;          // index of verts[]
+            // 写verts时的下标
+            let dstOffset = 0;
             for (let i = 1; i < pointNum; i++) {
                 let lastPoint = pointList[i - 1]
                 let nextPoint = pointList[i]
                 nextU = lastU + gapU
 
                 // 顶点和质点一一对应
+                // 顶点数据写入verts
                 dstOffset = floatsPerVert * (i-1) * 4;
                 verts[dstOffset]     = posX + lastPoint.x;
                 verts[dstOffset + 1] = posY + lastPoint.y;
